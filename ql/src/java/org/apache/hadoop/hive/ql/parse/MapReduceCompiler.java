@@ -268,6 +268,7 @@ public class MapReduceCompiler extends TaskCompiler {
         getParseContext(pCtx, rootTasks), ctx, rootTasks, pCtx.getFetchTask());
     PhysicalOptimizer physicalOptimizer = new PhysicalOptimizer(
         physicalContext, conf);
+    //
     physicalOptimizer.optimize();
 
   }

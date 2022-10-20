@@ -84,6 +84,7 @@ public class MapRedTask extends ExecDriver implements Serializable {
   @Override
   public int execute(DriverContext driverContext) {
 
+    //mp任务
     Context ctx = driverContext.getCtx();
     boolean ctxCreated = false;
 
@@ -271,6 +272,7 @@ public class MapRedTask extends ExecDriver implements Serializable {
         String value = entry.getValue();
         env[pos++] = name + "=" + value;
       }
+      //命令行提交mr任务
       // Run ExecDriver in another JVM
       executor = Runtime.getRuntime().exec(cmdLine, env, new File(workDir));
 

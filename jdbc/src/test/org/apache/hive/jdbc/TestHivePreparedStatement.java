@@ -22,6 +22,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.apache.hive.service.rpc.thrift.TCLIService.Iface;
@@ -34,6 +35,7 @@ import org.apache.hive.service.rpc.thrift.TOperationState;
 import org.apache.hive.service.rpc.thrift.TSessionHandle;
 import org.apache.hive.service.rpc.thrift.TStatus;
 import org.apache.hive.service.rpc.thrift.TStatusCode;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;

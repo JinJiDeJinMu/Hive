@@ -608,16 +608,19 @@ public class Driver implements IDriver {
 
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.PARSE);
 
+      //调用parse前钩子方法
       // Trigger query hook before compilation
       hookRunner.runBeforeParseHook(command);
 
       ASTNode tree;
       try {
+        //HSQL解析成AST
         tree = ParseUtils.parse(command, ctx);
       } catch (ParseException e) {
         parseError = true;
         throw e;
       } finally {
+        //调用parse后钩子方法
         hookRunner.runAfterParseHook(command, parseError);
       }
       perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.PARSE);
@@ -648,6 +651,7 @@ public class Driver implements IDriver {
         tree =  hookRunner.runPreAnalyzeHooks(hookCtx, tree);
       }
 
+      //语义分析和生成执行计划
       // Do semantic analysis and plan generation
       BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(queryState, tree);
 
@@ -656,6 +660,7 @@ public class Driver implements IDriver {
         generateValidTxnList();
       }
 
+      //把AST转成TaskTree
       sem.analyze(tree, ctx);
 
       if (executeHooks) {
@@ -678,6 +683,7 @@ public class Driver implements IDriver {
 
       // get the output schema
       schema = getSchema(sem, conf);
+      //生成queryPlan
       plan = new QueryPlan(queryStr, sem, perfLogger.getStartTime(PerfLogger.DRIVER_RUN), queryId,
         queryState.getHiveOperation(), schema);
 
@@ -1909,6 +1915,7 @@ public class Driver implements IDriver {
 
     lDrvState.stateLock.lock();
     try {
+      //如果已经编译完，直接运行
       if (alreadyCompiled) {
         if (lDrvState.driverState == DriverState.COMPILED) {
           lDrvState.driverState = DriverState.EXECUTING;
@@ -1932,6 +1939,7 @@ public class Driver implements IDriver {
           alreadyCompiled ? ctx.getCmd() : command);
       // Get all the driver run hooks and pre-execute them.
       try {
+        //调用运行前钩子方法
         hookRunner.runPreDriverHooks(hookContext);
       } catch (Exception e) {
         errorMessage = "FAILED: Hive Internal Error: " + Utilities.getNameMessage(e);
@@ -1960,6 +1968,7 @@ public class Driver implements IDriver {
       // same instance of Driver, which can run multiple queries.
       ctx.setHiveTxnManager(queryTxnMgr);
 
+      //检查中断
       checkInterrupted("at acquiring the lock.", null, null);
 
       lockAndRespond();
@@ -2008,6 +2017,7 @@ public class Driver implements IDriver {
       }
 
       try {
+        //最后执行的方法入口
         execute();
       } catch (CommandProcessorResponse cpr) {
         rollback(cpr);
@@ -2275,6 +2285,7 @@ public class Driver implements IDriver {
 
       hookRunner.runPreHooks(hookContext);
 
+      //execution 调用执行器运行之前钩子方法
       // Trigger query hooks before query execution.
       hookRunner.runBeforeExecutionHook(queryStr, hookContext);
 
@@ -2332,6 +2343,7 @@ public class Driver implements IDriver {
         // Launch upto maxthreads tasks
         Task<? extends Serializable> task;
         while ((task = driverCxt.getRunnable(maxthreads)) != null) {
+          //运行
           TaskRunner runner = launchTask(task, queryId, noName, jobname, jobs, driverCxt);
           if (!runner.isRunning()) {
             break;

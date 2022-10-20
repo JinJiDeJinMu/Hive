@@ -12160,6 +12160,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       astForMasking = ast;
     }
 
+    //把AST解析成OperatorTree
     // 2. Gen OP Tree from resolved Parse Tree
     Operator sinkOp = genOPTree(ast, plannerCtx);
 
@@ -12194,6 +12195,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
 
+    // 推断结果集模式
     // 3. Deduce Resultset Schema
     if (createVwDesc != null && !this.ctx.isCboSucceeded()) {
       resultSchema = convertRowSchemaToViewSchema(opParseCtx.get(sinkOp).getRowResolver());
@@ -12204,12 +12206,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // resultSchema will be re-initialized)
       // It will only be not null if cbo is enabled with new return path and it
       // succeeds.
+      //CBO优化的作用：在多表进行join的时候，会自动的选择最优的join顺序
       if (resultSchema == null) {
         resultSchema = convertRowSchemaToResultSetSchema(opParseCtx.get(sinkOp).getRowResolver(),
             HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_RESULTSET_USE_UNIQUE_COLUMN_NAMES));
       }
     }
 
+    // 为优化器和物理编译器生成解析上下文
     // 4. Generate Parse Context for Optimizer & Physical compiler
     copyInfoToQueryProperties(queryProperties);
     ParseContext pCtx = new ParseContext(queryState, opToPartPruner, opToPartList, topOps,
@@ -12227,6 +12231,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // Set the mapjoin hint if it needs to be disabled.
     pCtx.setDisableMapJoin(disableMapJoinWithHint(getQB().getParseInfo().getHintList()));
 
+    //构建视图
     // 5. Take care of view creation
     if (createVwDesc != null) {
       if (ctx.getExplainAnalyze() == AnalyzeState.RUNNING) {
@@ -12237,6 +12242,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         saveViewDefinition();
       }
 
+      // 校验创建视图
       // validate the create view statement at this point, the createVwDesc gets
       // all the information for semanticcheck
       validateCreateView();
@@ -12279,12 +12285,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
 
+    // 生成表访问统计信息（如果要求）
     // 6. Generate table access stats if required
     if (HiveConf.getBoolVar(this.conf, HiveConf.ConfVars.HIVE_STATS_COLLECT_TABLEKEYS)) {
       TableAccessAnalyzer tableAccessAnalyzer = new TableAccessAnalyzer(pCtx);
       setTableAccessInfo(tableAccessAnalyzer.analyzeTableAccess());
     }
 
+    //执行逻辑优化
     // 7. Perform Logical optimization
     if (LOG.isDebugEnabled()) {
       LOG.debug("Before logical optimization\n" + Operator.toString(pCtx.getTopOps().values()));
@@ -12292,6 +12300,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
     optm.initialize(conf);
+    //逐一调用转换器，对查询计划进行优化
     pCtx = optm.optimize();
     if (pCtx.getColumnAccessInfo() != null) {
       // set ColumnAccessInfo for view column authorization
@@ -12301,6 +12310,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       LOG.debug("After logical optimization\n" + Operator.toString(pCtx.getTopOps().values()));
     }
 
+    //生成列访问统计信息(如果要求)
     // 8. Generate column access stats if required - wait until column pruning
     // takes place during optimization
     boolean isColumnInfoNeedForAuth = SessionState.get().isAuthorizationModeV2()
@@ -12312,6 +12322,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       setColumnAccessInfo(columnAccessAnalyzer.analyzeColumnAccess(this.getColumnAccessInfo()));
     }
 
+    //优化物理运算树并转换为目标执行引擎
     // 9. Optimize Physical op tree & Translate to target execution engine (MR,
     // TEZ..)
     if (!ctx.getExplainLogical()) {
@@ -12342,6 +12353,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     LOG.info("Completed plan generation");
 
+    //将访问的列放入readEntity
     // 11. put accessed columns to readEntity
     if (HiveConf.getBoolVar(this.conf, HiveConf.ConfVars.HIVE_STATS_COLLECT_SCANCOLS)) {
       putAccessedColumnsToReadEntity(inputs, columnAccessInfo);

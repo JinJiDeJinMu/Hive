@@ -124,6 +124,7 @@ public class CliDriver {
     // Flush the print stream, so it doesn't include output from the last command
     ss.err.flush();
     String cmd_trimmed = HiveStringUtils.removeComments(cmd).trim();
+    //以空格分割命令
     String[] tokens = tokenizeCmd(cmd_trimmed);
     int ret = 0;
 
@@ -179,7 +180,7 @@ public class CliDriver {
             stringifyException(e));
         ret = 1;
       }
-    }  else { // local mode
+    }  else { // sql模式
       try {
 
         try (CommandProcessor proc = CommandProcessorFactory.get(tokens, (HiveConf) conf)) {
@@ -242,14 +243,17 @@ public class CliDriver {
           return ret;
         }
 
+        //计算查询时长
         // query has run capture the time
         long end = System.currentTimeMillis();
         double timeTaken = (end - start) / 1000.0;
 
         ArrayList<String> res = new ArrayList<String>();
 
+        //检查是否打印表头
         printHeader(qp, out);
 
+        //打印查询结果
         // print the results
         int counter = 0;
         try {
@@ -261,6 +265,7 @@ public class CliDriver {
                   if (escapeCRLF) {
                     r = EscapeCRLFHelper.escapeCRLF(r);
                   }
+                  //逐行打印结果
               out.println(r);
             }
             counter += res.size();
@@ -281,6 +286,7 @@ public class CliDriver {
           ((FetchConverter) out).fetchFinished();
         }
 
+        //打印结果之后输出的字符串
         console.printInfo(
             "Time taken: " + timeTaken + " seconds" + (counter == 0 ? "" : ", Fetched: " + counter + " row(s)"));
       } else {
@@ -349,6 +355,7 @@ public class CliDriver {
     SignalHandler oldSignal = null;
     Signal interruptSignal = null;
 
+    //中断回调方法
     if (allowInterrupting) {
       // Remember all threads that were running at the time we started line processing.
       // Hook up the custom Ctrl+C handler while processing this line
@@ -680,13 +687,16 @@ public class CliDriver {
   }
 
   public static void main(String[] args) throws Exception {
+    // 源码开始的地方
     int ret = new CliDriver().run(args);
+    //退出程序
     System.exit(ret);
   }
 
   public  int run(String[] args) throws Exception {
 
     OptionsProcessor oproc = new OptionsProcessor();
+    //加载并检查hive系统配置conf(code 1基本代码系统错误)
     if (!oproc.process_stage1(args)) {
       return 1;
     }
@@ -703,6 +713,7 @@ public class CliDriver {
     }
 
     CliSessionState ss = new CliSessionState(new HiveConf(SessionState.class));
+    //定义输入流、输出流、日志流、错误流
     ss.in = System.in;
     try {
       ss.out = new PrintStream(System.out, true, "UTF-8");
@@ -712,6 +723,7 @@ public class CliDriver {
       return 3;
     }
 
+    //校验参数(code2 基本是参数错误)
     if (!oproc.process_stage2(ss)) {
       return 2;
     }
@@ -741,6 +753,7 @@ public class CliDriver {
     }).substitute(conf, prompt);
     prompt2 = spacesForString(prompt);
 
+    //是否使用tez客户端，默认true
     if (HiveConf.getBoolVar(conf, ConfVars.HIVE_CLI_TEZ_SESSION_ASYNC)) {
       // Start the session in a fire-and-forget manner. When the asynchronously initialized parts of
       // the session are needed, the corresponding getters and other methods will wait as needed.
@@ -777,9 +790,11 @@ public class CliDriver {
     CliDriver cli = new CliDriver();
     cli.setHiveVariables(oproc.getHiveVariables());
 
+    //选择数据库 (use database)
     // use the specified database if specified
     cli.processSelectDatabase(ss);
 
+    //处理初始化文件
     // Execute -i init files (always in silent mode)
     cli.processInitFiles(ss);
 
@@ -818,6 +833,7 @@ public class CliDriver {
       }
       if (line.trim().endsWith(";") && !line.trim().endsWith("\\;")) {
         line = prefix + line;
+        //以;分割处理每个HQL
         ret = cli.processLine(line, true);
         prefix = "";
         curDB = getFormattedDb(conf, ss);

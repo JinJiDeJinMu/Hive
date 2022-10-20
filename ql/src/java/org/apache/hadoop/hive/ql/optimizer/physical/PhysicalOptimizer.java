@@ -108,6 +108,7 @@ public class PhysicalOptimizer {
    */
   public PhysicalContext optimize() throws SemanticException {
     for (PhysicalPlanResolver r : resolvers) {
+      //物理优化
       pctx = r.resolve(pctx);
     }
     return pctx;

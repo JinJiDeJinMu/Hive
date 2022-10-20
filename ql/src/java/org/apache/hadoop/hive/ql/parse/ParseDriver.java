@@ -198,7 +198,9 @@ public class ParseDriver {
       LOG.debug("Parsing command: " + command);
     }
 
+    //构建词法解析器
     HiveLexerX lexer = new HiveLexerX(new ANTLRNoCaseStringStream(command));
+    //生成tokens
     TokenRewriteStream tokens = new TokenRewriteStream(lexer);
     if (ctx != null) {
       if (viewFullyQualifiedName == null) {
@@ -210,6 +212,7 @@ public class ParseDriver {
       }
       lexer.setHiveConf(ctx.getConf());
     }
+    //语法解析
     HiveParser parser = new HiveParser(tokens);
     if (ctx != null) {
       parser.setHiveConf(ctx.getConf());
@@ -217,6 +220,7 @@ public class ParseDriver {
     parser.setTreeAdaptor(adaptor);
     HiveParser.statement_return r = null;
     try {
+      //把token转成最后的抽象语法树
       r = parser.statement();
     } catch (RecognitionException e) {
       e.printStackTrace();
